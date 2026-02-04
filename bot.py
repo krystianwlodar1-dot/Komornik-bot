@@ -12,7 +12,12 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 ALERT_CHANNEL = int(os.getenv("ALERT_CHANNEL_ID"))
 
 intents = discord.Intents.default()
-bot = discord.Client(intents=intents)
+class Komornik(discord.Client):
+    async def setup_hook(self):
+        self.loop.create_task(alert_loop())
+
+bot = Komornik(intents=intents)
+
 
 URL = "https://cyleria.pl/?subtopic=houses"
 BASE = "https://cyleria.pl/"
@@ -146,5 +151,4 @@ async def alert_loop():
 
         await asyncio.sleep(3600)  # co 1 godzinę
 
-bot.loop.create_task(alert_loop())
 bot.run(TOKEN)
