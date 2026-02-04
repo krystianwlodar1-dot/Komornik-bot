@@ -29,13 +29,22 @@ TIMEZONE = pytz.timezone("Europe/Warsaw")
 # -------------------------
 
 def fetch_houses():
-    r = requests.get(URL)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (KomornikBot; Discord)"
+    }
+    r = requests.get(URL, headers=headers, timeout=15)
+
     soup = BeautifulSoup(r.text, "html.parser")
     table = soup.find("table", {"class": "TableContent"})
 
-    houses = []
+if not table:
+    print("Nie znaleziono tabeli domów — strona mogła zablokować zapytanie.")
+    return []
 
-    for row in table.find_all("tr")[1:]:
+houses = []
+
+for row in table.find_all("tr")[1:]:
+
         tds = row.find_all("td")
 
         owner = tds[1].text.strip()
@@ -140,6 +149,10 @@ async def alert_loop():
 
     while True:
         houses = fetch_houses()
+if not houses:
+    await asyncio.sleep(600)
+    continue
+
         now = datetime.now(TIMEZONE)
 
         for h in houses:
