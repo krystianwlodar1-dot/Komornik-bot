@@ -5,29 +5,28 @@ from datetime import datetime
 
 BASE = "https://cyleria.pl"
 
-def get_last_login(name):
-    url = f"{BASE}/?subtopic=characters&name={name}"
+def get_last_login(owner_name):
+    url = f"{BASE}/?subtopic=characters&name={owner_name}"
     html = requests.get(url).text
     soup = BeautifulSoup(html, "lxml")
-    li = soup.find("li", class_="list-group-item")
-    if li:
-        strong = li.find("strong")
-        return strong.text.strip()
-    return "Unknown"
+    strong = soup.find("strong")
+    return strong.text.strip() if strong else "Unknown"
 
-def scrape():
+def scrape(progress_callback=None):
     html = requests.get(f"{BASE}/?subtopic=houses").text
     soup = BeautifulSoup(html, "lxml")
-    rows = soup.select("table tr")[1:]
+    rows = soup.select("table tr")[1:]  # pomijamy nagłówek
 
-    for r in rows:
+    total = len(rows)
+    for i, r in enumerate(rows, start=1):
         tds = r.find_all("td")
         if len(tds) < 4:
             continue
 
         address = tds[0].text.strip()
-        pop = tds[0].find("span")
 
+        # pop-up z mapą
+        pop = tds[0].find("span")
         map_img = None
         city = None
         house_id = None
@@ -36,10 +35,10 @@ def scrape():
             sub = BeautifulSoup(pop["data-bs-content"], "lxml")
             img = sub.find("img")
             div = sub.find("div", class_="mt-2")
-
-            map_img = img["src"]
-            city = div.text
-            house_id = int(map_img.split("/")[-1].replace(".png",""))
+            if img and div:
+                map_img = img["src"]
+                city = div.text.strip()
+                house_id = int(map_img.split("/")[-1].replace(".png", ""))
 
         size = int(tds[1].text.strip())
         owner = tds[2].text.strip()
@@ -55,3 +54,6 @@ def scrape():
             "last_login": last_login,
             "last_seen": datetime.utcnow().isoformat()
         })
+
+        if progress_callback:
+            progress_callback(i, total)
