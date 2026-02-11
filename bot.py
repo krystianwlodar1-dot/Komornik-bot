@@ -53,3 +53,48 @@ async def monitor():
                     f"🏚️ **{h[1]} ({h[2]})**\n"
                     f"📐 {h[4]} sqm\n"
                     f"👤 {h[5]}\n"
+                    f"🕒 {h[6]}\n"
+                    f"🗺️ {h[3]}"
+                )
+
+@bot.command()
+async def info(ctx):
+    await ctx.send(
+        "**Komendy Komornika:**\n"
+        "`!status` → ile domków w cache\n"
+        "`!10dni` → ≥10 dni offline\n"
+        "`!fast` → ≥13 dni 20h offline\n"
+    )
+
+@bot.command()
+async def status(ctx):
+    await ctx.send(f"🏠 W cache jest **{count_houses()}** domków.")
+
+@bot.command(name="10dni")
+async def tendays(ctx):
+    for h in get_all():
+        dt = parse_date(h[6])
+        if dt and hours_offline(dt) >= 240:
+            await ctx.send(
+                f"🏚️ {h[1]} ({h[2]})\n"
+                f"📐 {h[4]} sqm\n"
+                f"👤 {h[5]}\n"
+                f"🕒 {h[6]}\n"
+                f"🗺️ {h[3]}"
+            )
+
+@bot.command()
+async def fast(ctx):
+    for h in get_all():
+        dt = parse_date(h[6])
+        if dt and hours_offline(dt) >= FAST_HOURS:
+            await ctx.send(
+                f"🔥 FAST\n"
+                f"🏚️ {h[1]} ({h[2]})\n"
+                f"📐 {h[4]} sqm\n"
+                f"👤 {h[5]}\n"
+                f"🕒 {h[6]}\n"
+                f"🗺️ {h[3]}"
+            )
+
+bot.run(TOKEN)
