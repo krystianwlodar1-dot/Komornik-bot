@@ -1,6 +1,6 @@
 import sqlite3
 
-db = sqlite3.connect("houses.db")
+db = sqlite3.connect("houses.db", check_same_thread=False)
 c = db.cursor()
 
 c.execute("""
@@ -32,3 +32,6 @@ def save_house(h):
 
 def get_all():
     return c.execute("SELECT * FROM houses").fetchall()
+
+def count_houses():
+    return c.execute("SELECT COUNT(*) FROM houses").fetchone()[0]
