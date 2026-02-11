@@ -10,8 +10,10 @@ CHANNEL = int(os.getenv("CHANNEL_ID"))
 
 intents = discord.Intents.default()
 intents.message_content = True
-
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+FAST_HOURS = 13 * 24 + 20
+alerted = set()
 
 def parse_date(s):
     try:
@@ -20,66 +22,34 @@ def parse_date(s):
         return None
 
 def hours_offline(date):
-    if not date:
-        return 0
     return (datetime.utcnow() - date).total_seconds() / 3600
 
 @bot.event
 async def on_ready():
     print("Komornik online")
     scrape()
-    channel = bot.get_channel(CHANNEL)
-    await channel.send(f"📊 Komornik wczytał **{count_houses()}** domków do cache.")
+    ch = bot.get_channel(CHANNEL)
+    await ch.send(f"📊 Komornik wczytał **{count_houses()}** domków do cache.")
     monitor.start()
 
 @tasks.loop(minutes=15)
 async def monitor():
     scrape()
-
-@bot.command()
-async def info(ctx):
-    await ctx.send(
-        "**Komendy Komornika:**\n"
-        "`!status` → ile domków jest w cache\n"
-        "`!10dni` → domki gdzie właściciel offline ≥10 dni\n"
-        "`!fast` → domki gdzie offline ≥13 dni 20h\n"
-    )
-
-@bot.command()
-async def status(ctx):
-    await ctx.send(f"🏠 W cache jest **{count_houses()}** domków.")
-
-@bot.command(name="10dni")
-async def tendays(ctx):
     data = get_all()
-    for h in data:
-        dt = parse_date(h[6])
-        if not dt:
-            continue
-        if hours_offline(dt) >= 240:
-            await ctx.send(
-                f"🏚️ **{h[1]} ({h[2]})**\n"
-                f"📐 {h[4]} sqm\n"
-                f"👤 {h[5]}\n"
-                f"🕒 {h[6]}\n"
-                f"🗺️ {h[3]}"
-            )
+    ch = bot.get_channel(CHANNEL)
 
-@bot.command()
-async def fast(ctx):
-    data = get_all()
     for h in data:
-        dt = parse_date(h[6])
-        if not dt:
-            continue
-        if hours_offline(dt) >= (13*24 + 20):
-            await ctx.send(
-                f"🔥 **FAST CLAIM**\n"
-                f"🏚️ {h[1]} ({h[2]})\n"
-                f"📐 {h[4]} sqm\n"
-                f"👤 {h[5]}\n"
-                f"🕒 {h[6]}\n"
-                f"🗺️ {h[3]}"
-            )
+        house_id = h[0]
+        last_login = parse_date(h[6])
 
-bot.run(TOKEN)
+        if not last_login:
+            continue
+
+        if hours_offline(last_login) >= FAST_HOURS:
+            if house_id not in alerted:
+                alerted.add(house_id)
+                await ch.send(
+                    f"🔥 **FAST ALERT**\n"
+                    f"🏚️ **{h[1]} ({h[2]})**\n"
+                    f"📐 {h[4]} sqm\n"
+                    f"👤 {h[5]}\n"
