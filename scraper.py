@@ -18,9 +18,12 @@ def scrape(progress_callback=None):
     rows = soup.select("table tr")[1:]  # pomijamy nagłówek
 
     total = len(rows)
+    if progress_callback:
+        progress_callback(0, total)  # startowy progress
+
     for i, r in enumerate(rows, start=1):
         tds = r.find_all("td")
-        if len(tds) < 4:
+        if len(tds) < 3:
             continue
 
         address = tds[0].text.strip()
