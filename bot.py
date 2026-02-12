@@ -14,7 +14,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 FAST_THRESHOLD = timedelta(days=13, hours=20)
-alerted_houses = set()  # domki, które już wysłały FAST alert
+alerted_houses = set()
 
 def parse_date(s):
     try:
@@ -28,11 +28,9 @@ async def scrape_with_progress(ch):
     def progress_callback(done, total):
         bot.loop.create_task(progress_msg.edit(content=f"⏳ Wczytywanie domków: {done}/{total}"))
 
-    # uruchom scraper w osobnym wątku
     await asyncio.to_thread(scrape, progress_callback)
     await progress_msg.edit(content=f"✅ Wczytano {count_houses()} domków")
-
-    await check_fast(ch)  # FAST alerty po starcie
+    await check_fast(ch)
 
 async def check_fast(ch):
     for h in get_all():
@@ -49,11 +47,10 @@ async def check_fast(ch):
                     f"🗺️ {h[3]}"
                 )
 
-# Automatyczny monitoring co 15 minut
 @tasks.loop(minutes=15)
 async def monitor():
     ch = bot.get_channel(CHANNEL)
-    await asyncio.to_thread(scrape)  # scrapowanie w osobnym wątku
+    await asyncio.to_thread(scrape)
     await check_fast(ch)
 
 @bot.event
@@ -61,7 +58,7 @@ async def on_ready():
     print("Komornik online")
     ch = bot.get_channel(CHANNEL)
     await scrape_with_progress(ch)
-    monitor.start()  # start ciągłego monitoringu
+    monitor.start()
 
 @bot.command()
 async def status(ctx):
