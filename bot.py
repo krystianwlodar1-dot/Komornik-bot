@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands, tasks
-from scraper import scrape, get_all
+from scraper import scrape
+from database import get_all, count_houses
+
 from database import count_houses
 from datetime import datetime, timedelta
 import os
