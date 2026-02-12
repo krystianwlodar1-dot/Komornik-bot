@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from database import save_house
+from database import save_house, count_houses
 from datetime import datetime
 
 BASE = "https://cyleria.pl"
@@ -18,8 +18,6 @@ def scrape(progress_callback=None):
     rows = soup.select("table tr")[1:]  # pomijamy nagłówek
 
     total = len(rows)
-    if progress_callback:
-        progress_callback(0, total)  # startowy progress
 
     for i, r in enumerate(rows, start=1):
         tds = r.find_all("td")
@@ -28,35 +26,42 @@ def scrape(progress_callback=None):
 
         address = tds[0].text.strip()
 
-        # pop-up z mapą
         pop = tds[0].find("span")
         map_img = None
         city = None
         house_id = None
 
         if pop:
-            sub = BeautifulSoup(pop["data-bs-content"], "lxml")
+            sub = BeautifulSoup(pop.get("data-bs-content",""), "lxml")
             img = sub.find("img")
             div = sub.find("div", class_="mt-2")
             if img and div:
-                map_img = img["src"]
+                map_img = img.get("src")
                 city = div.text.strip()
-                house_id = int(map_img.split("/")[-1].replace(".png", ""))
+                try:
+                    house_id = int(map_img.split("/")[-1].replace(".png", ""))
+                except:
+                    house_id = i  # fallback jeśli ID nie jest liczbą
 
-        size = int(tds[1].text.strip())
+        try:
+            size = int(tds[1].text.strip())
+        except:
+            size = 0
         owner = tds[2].text.strip()
-        last_login = get_last_login(owner) if owner != "None" else "None"
+        last_login = get_last_login(owner) if owner.lower() != "none" else "None"
 
-        save_house({
-            "house_id": house_id,
-            "address": address,
-            "city": city,
-            "map_image": map_img,
-            "size": size,
-            "owner": owner,
-            "last_login": last_login,
-            "last_seen": datetime.utcnow().isoformat()
-        })
+        if house_id and address:
+            save_house({
+                "house_id": house_id,
+                "address": address,
+                "city": city,
+                "map_image": map_img,
+                "size": size,
+                "owner": owner,
+                "last_login": last_login,
+                "last_seen": datetime.utcnow().isoformat()
+            })
 
         if progress_callback:
-            progress_callback(i, total)
+            done = count_houses()  # licznik oparty na faktycznej bazie
+            progress_callback(done, total)
